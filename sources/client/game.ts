@@ -25,7 +25,7 @@ function setSendMessage( sendMessageFunction: typeof sendMessage ): void
 /**
  * Обрабатывает ход игрока
  * 
- * @param number Загаданное пользователем число
+ * @param knuckle Костяшка, положенная игроком на стол
  */
 function turnHandler( knuckle: GameScreen.Knuckle | null ): void
 {
@@ -35,12 +35,20 @@ function turnHandler( knuckle: GameScreen.Knuckle | null ): void
 	} );
 }
 
+/**
+ * Отправляет запрос на взятие костяшки
+ */
 function knuckleTaker(): void {
 	sendMessage( {
 		type: 'takeKnuckle',
 	} );
 }
 
+/**
+ * Финализатор игры
+ * 
+ * @param valuesSum Сумма значений у игрока в руке
+ */
 function finalizer( valuesSum: number ): void
 {
 	sendMessage( {
@@ -85,23 +93,35 @@ function startGame(): void
  * Меняет активного игрока
  * 
  * @param myTurn Ход текущего игрока?
+ * @param knuckle Костяшка, положенная последним игроком
  */
 function changePlayer( myTurn: boolean, knuckle: GameScreen.Knuckle | null ): void
 {
 	GameScreen.update( myTurn, knuckle );
 }
 
+/**
+ * Вставляет взятую из базара костяшку в руку
+ * 
+ * @param knuckle Костяшка, взятая из базара
+ */
 function insertTakenKnuckle( knuckle: GameScreen.Knuckle | null ): void
 {
 	if (knuckle === null) alert("No knuckles left");
 	else GameScreen.insertKnuckle( knuckle.value1, knuckle.value2 );
 }
 
+/**
+ * Отменяет ход игрока
+ */
 function cancelTurn(): void
 {
 	GameScreen.onCancel();
 }
 
+/**
+ * Подсчитывает и отправляет результат игрока
+ */
 function result(): void
 {
 	GameScreen.countResult();
@@ -111,6 +131,7 @@ function result(): void
  * Завершает игру
  * 
  * @param result Результат игры
+ * @param points Набранные очки
  */
 function endGame( result: 'win' | 'loose' | 'abort', points?: number ): void
 {

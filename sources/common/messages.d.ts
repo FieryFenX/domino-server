@@ -6,10 +6,11 @@ import { Knuckle } from './knuckle';
 export type GameStartedMessage = {
 	/** Тип сообщения */
 	type: 'gameStarted';
-	/** Мой ход? */
-	//myTurn: boolean;
 };
 
+/**
+ * Данные о костяшках на руках
+ */
 export type StartInfoMessage = {
 	/** Тип сообщения */
 	type: 'startInfo';
@@ -37,11 +38,17 @@ export type PlayerRollMessage = {
 	knuckle: Knuckle | null;
 };
 
+/**
+ * Взять костяшку из базара
+ */
 export type TakeKnuckleMessage = {
 	/** Тип сообщения */
 	type: 'takeKnuckle';
 }
 
+/**
+ * Выдать костяшку из базара
+ */
 export type GiveKnuckleMessage = {
 	/** Тип сообщения */
 	type: 'giveKnuckle';
@@ -49,11 +56,17 @@ export type GiveKnuckleMessage = {
 	knuckle: Knuckle | null;
 }
 
+/**
+ * Игра завершена
+ */
 export type GameEndedMessage = {
 	/** Тип сообщения */
 	type: 'gameEnded';
 }
 
+/**
+ * Данные игрока в конце игры
+ */
 export type ResultMessage = {
 	/** Тип сообщения */
 	type: 'result';
@@ -62,7 +75,7 @@ export type ResultMessage = {
 }
 
 /**
- * Результат хода игроков
+ * Результат игры
  */
 export type GameResultMessage = {
 	/** Тип сообщения */

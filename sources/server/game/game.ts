@@ -21,15 +21,27 @@ class Game
 	 * Количество игроков в сессии
 	 */
 	static readonly PLAYERS_IN_SESSION = 3;
-
+	/**
+	 * Базар (содержит все костяшки, ещё не бывшие в игре)
+	 */
 	private _bazaarArr: Array < { value1: number, value2: number } > = [];
-
+	/**
+	 * Набор значений для:
+	 * 1. Определения первого игрока
+	 * 2. Подстчета очков и определения победителя
+	 */
 	private _bestValue!: { player: WebSocket, values: [ number | null, number ] };
-	
+	/**
+	 * Две крайние костяшки на поле
+	 */
 	private _edgeKnuckles: Array < { knuckle: Knuckle, edge: 1 | 2} > = [];
-
+	/**
+	 * Все костяшки, лежащие на поле
+	 */
 	private _knuckles: Knuckle[] = [];
-
+	/**
+	 * Количество пропущенных подряд ходов
+	 */
 	private _skipCount: number = 0;
 
 	/**
@@ -60,17 +72,20 @@ class Game
 		this._construct();
 	}
 
+	/**
+	 * Конструирует все необходимые для старта игры значения и наборы значений
+	 */
 	private _construct(): void
 	{
 		this._bestValue = {
 			player: this._session[0],
 			values: [ null, -1 ],
 		};
-		
+		// Заполняет базар последовательными парами значений
 		for (let i = 0; i < 7; i++)
 			for (let j = i; j < 7; j++)
 				this._bazaarArr.push({ value1: i, value2: j });
-		// shuffle
+		// Перемешивает костяшки в базаре
 		for (let i = 27; i > 0; i--) {
 			const j = Math.floor(Math.random() * (i + 1));
 			[this._bazaarArr[i], this._bazaarArr[j]] = [this._bazaarArr[j], this._bazaarArr[i]];
@@ -275,6 +290,11 @@ class Game
 		}
 	}
 	
+	/**
+	 * Выдаёт костяшку игроку
+	 * 
+	 * @param player Игрок
+	 */
 	private _giveKnuckle( player: WebSocket ): void
 	{
 		const knuckle = this._bazaarArr.pop();
@@ -287,6 +307,13 @@ class Game
 		)
 	}
 
+	/**
+	 * Определяет, кто из игроков должен ходить первым (запускается для каждого игрока по очереди)
+	 * 
+	 * @param player Игрок
+	 * @param playerMaxDouble Наибольший дубль в руке игрока
+	 * @param playerMaxSum Наибольшая сумма пары значений на костяшках в руке игрока
+	 */
 	private _defineFirst( player: WebSocket, playerMaxDouble: number | null, playerMaxSum: number ): void
 	{
 		if ( !this._bestValue.values[0] || !playerMaxDouble ?
@@ -301,6 +328,11 @@ class Game
 		}
 	}
 
+	/**
+	 * Отправляет игрокам сообщение о том, кто из них ходит первый
+	 * 
+	 * @param firstPlayer Первый игрок
+	 */
 	private _sendStartStatus( firstPlayer: WebSocket ): void
 	{
 		this._bestValue.values[0] = 300;
@@ -330,6 +362,14 @@ class Game
 					.catch( onError );
 	}
 
+	/**
+	 * Проверяет, стыкуются ли две костяшки
+	 * 
+	 * @param knuckle1 Данные первой костяшки
+	 * @param edge1 Сторона для проверки
+	 * @param knuckle2 Данные второй костяшки
+	 * @param edge2 Сторона для проверки
+	 */
 	private _edgesConnect( knuckle1: number[], edge1: 2 | 1, knuckle2: number[], edge2: 2 | 1 ): boolean
 	{
 		const deltaX = Math.abs( knuckle1[ 2*edge1 ] - knuckle2[ 2*edge2 ] );
@@ -339,25 +379,19 @@ class Game
 		return false;
 	}
 
+	/**
+	 * Проверяет корректность хода
+	 * 
+	 * @param knuckle Костяшка, положенная на стол
+	 */
 	private _turnIsCorrect( knuckle: Knuckle ): boolean
 	{
 		const dataKnuckle = Object.values( knuckle );
 		for ( let edgeKnuckle of this._edgeKnuckles ) {
-			// for ( let kValue of [ knuckle.value1, knuckle.value2 ] )
-			// 	for ( let ekValue of [ edgeKnuckle.value1, edgeKnuckle.value2 ] )
-			// 		if ( kValue === ekValue ) {
-			// 			const deltaX = Math.abs( knuckle.x1! - edgeKnuckle.x1! );
-			// 			const deltaY = Math.abs( knuckle.y1! - edgeKnuckle.y1! );
-			// 			if ( deltaX <= 1 && deltaY <= 1 && deltaX !== deltaY )
-			// 				return true;
-			// 		}
 			const j = edgeKnuckle.edge;
 			const dataEdgeKnuckle = Object.values( edgeKnuckle.knuckle );
 			for ( const i of [ 1, 2 ] as (2 | 1)[] )
 				if ( dataKnuckle[i-1] === dataEdgeKnuckle[j-1] ) {
-					// const deltaX = Math.abs( dataKnuckle[ 2*(i+1) ] - dataEdgeKnuckle[ 2*j ] );
-					// const deltaY = Math.abs( dataKnuckle[ 2*(i+1) + 1 ] - dataEdgeKnuckle[ 2*j + 1 ] );
-					// console.log( deltaX, deltaY );
 					if ( this._edgesConnect( dataKnuckle, i, dataEdgeKnuckle, j ) ) {
 						if ( this._edgesConnect( dataKnuckle, 3-i as 2|1, dataEdgeKnuckle, 3-j as 2|1 ) )
 							return false;
@@ -384,6 +418,8 @@ class Game
 	 */
 	private _onPlayerRoll( currentPlayer: WebSocket, currentPlayerKnuckle: Knuckle | null ): void
 	{
+		// Проверка, в свою ли очередь игрок совершил ход
+		
 		if ( this._playersState.get( currentPlayer ) != true )
 		{
 			this._sendMessage(
@@ -397,7 +433,9 @@ class Game
 			
 			return;
 		}
-		
+
+		// Проверка, положена ли костяшка, и если положена, проверка корректности и обработка хода
+
 		if ( currentPlayerKnuckle === null) {
 			if ( ++this._skipCount === Game.PLAYERS_IN_SESSION ) {
 				this._skipCount = -1;
@@ -426,6 +464,8 @@ class Game
 			}
 			this._knuckles.push( currentPlayerKnuckle );
 		}
+
+		// Определение следующего игрока и отправка соответствующих сообщений
 
 		const nextPlayer = this._session[ (this._session.indexOf(currentPlayer) + 1) % Game.PLAYERS_IN_SESSION ];
 		this._playersState.set( nextPlayer, true );
@@ -470,6 +510,11 @@ class Game
 		return;
 	}
 
+	/**
+	 * Отправка сообщения о завершении игры
+	 * 
+	 * @param ignorePlayer Игрок, от которого поступила информация о результатах
+	 */
 	private _sendEndMessage( ignorePlayer?: WebSocket ): void
 	{
 		for ( const player of this._session )
@@ -483,6 +528,12 @@ class Game
 					.catch( onError );
 	}
 
+	/**
+	 * Определяет победителя (запускается для каждого игрока по очереди)
+	 * 
+	 * @param player Игрок
+	 * @param valuesSum Сумма значений в руке игрока
+	 */
 	private _defineWinner( player: WebSocket, valuesSum: number ): void
 	{
 		if ( valuesSum < this._bestValue.values[0]! ) {
@@ -492,6 +543,11 @@ class Game
 		this._bestValue.values[1] += valuesSum;
 	}
 
+	/**
+	 * Отправляет игрокам информацию о результатах игры
+	 * 
+	 * @param winner Победитель
+	 */
 	_sendResultMessage( winner: WebSocket ): void
 	{
 		for ( const player of this._session )

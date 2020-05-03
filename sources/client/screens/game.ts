@@ -1,57 +1,28 @@
-/*class Knuckle {
-	x1: number;
-	y1: number;
-	x2: number;
-	y2: number;
-	value1: number;
-	value2: number;
-
-	constructor( HTMLknuckle: HTMLButtonElement ) {
-		this.x1 = Number(HTMLknuckle.dataset.x);
-		this.y1 = Number(HTMLknuckle.dataset.y);
-		if (HTMLknuckle.classList.contains('vertical')) {
-			this.x2 = this.x1;
-			this.y2 = this.y1 + ( HTMLknuckle.classList.contains('inverted') ? -1 : 1 );
-		}
-		else {
-			this.y2 = this.y1;
-			this.x2 = this.x1 + ( HTMLknuckle.classList.contains('inverted') ? -1 : 1 );
-		}
-		const values: Array<number> = [];
-		for (let elem of HTMLknuckle.classList) values.push(numerals.indexOf(elem));
-		this.value1 = values[0];
-		this.value2 = (values[1] ? values[1] : this.value1);
-	}
-
-	HTML(): HTMLButtonElement {
-		const knuckle = generateKnuckle( this.value1, this.value2 );
-		knuckle.dataset.x = String(this.x1);
-		knuckle.dataset.y = String(this.y1);
-		if (this.y1 !== this.y2) knuckle.classList.add('vertical');
-		if (this.y2 < this.y1 || this.x2 < this.x1) knuckle.classList.add('inverted');
-
-		return knuckle;
-	}
-}*/
-
 import type { Knuckle } from '../../common/knuckle';
 
 /**
- * Заголовок экрана
- */
-//const title = document.querySelector( 'main.game>h2' ) as HTMLHeadingElement;
-/**
- * Форма для действий игрока
+ * Кнопка для завершения хода
  */
 const endTurn = document.querySelector( ".button[name = 'end-turn']" ) as HTMLButtonElement;
+/**
+ * Кнопка для отмены хода
+ */
 const cancel = document.querySelector( ".button[name = 'cancel']" ) as HTMLButtonElement;
 /**
- * Набор полей на форме
+ * Элемент для затемнения экрана
  */
-//const fieldset = form.querySelector( 'fieldset' )!;
 const darkBG = document.querySelector( '.darkBG' )!;
+/**
+ * Рука игрока (содержит его костяшки)
+ */
 const hand = document.querySelector( '.hand' )!;
+/**
+ * Игровое поле
+ */
 const field = document.querySelector( '.field' )!;
+/**
+ * Кнопка для взятия костяшки из базара
+ */
 const bazaar = document.querySelector('.bazaar') as HTMLButtonElement;
 
 if ( !endTurn || !cancel || !darkBG || !hand || !field || !bazaar )
@@ -59,41 +30,64 @@ if ( !endTurn || !cancel || !darkBG || !hand || !field || !bazaar )
 	throw new Error( 'Can\'t find required elements on "game" screen' );
 }
 
+/**
+ * Набор словесных описаний возможных значений на костяшках
+ */
 const numerals: string[] = ['zero', 'one', 'two', 'three', 'four', 'five', 'six'];
 
+/**
+ * Костяшка, выбранная пользователем для хода
+ */
 let selectedKnuckle: HTMLButtonElement | null = null;
+/**
+ * Базовые координаты поля, определяющие смещение области видимости
+ */
 let baseX: number = 0,
     baseY: number = 0;
+/**
+ * Координаты положенной на поле костяшки
+ */
 let x1: number | undefined = undefined,
     y1: number | undefined = undefined,
     x2: number | undefined = undefined,
 	y2: number | undefined = undefined;
-	
-/**
- * Поле с загаданным числом
- */
-/*const numberInput = form.elements.namedItem( 'number' ) as HTMLInputElement;
-*/
 
 /**
  * Обработчик хода игрока
  */
 type TurnHandler = ( knuckle: Knuckle | null ) => void;
+/**
+ * Отправитель запроса на взятие костяшки
+ */
 type KnuckleTaker = () => void;
+/**
+ * Финализатор игры
+ */
 type Finalizer = ( valuesSum: number ) => void;
 
 /**
  * Обработчик хода игрока
  */
 let turnHandler: TurnHandler;
+/**
+ * Отправитель запроса на взятие костяшки
+ */
 let knuckleTaker: KnuckleTaker;
+/**
+ * Финализатор игры
+ */
 let finalizer: Finalizer;
 
 bazaar.addEventListener( 'click', takeKnuckle );
 endTurn.addEventListener( 'click', onSubmit );
 cancel.addEventListener( 'click', onCancel );
-
+/**
+ * Слушатель для перерисовки игрового поля при изменении размеров окна
+ */
 window.addEventListener("resize", () => {requestAnimationFrame(drawField)}, false);
+/**
+ * Слушатель для перемещения области видимости с помощью колесика мыши
+ */
 window.addEventListener("wheel", e => {
   if (Math.abs(e.deltaY) + Math.abs(e.deltaX) > 30) {
   if (!e.altKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
@@ -105,7 +99,9 @@ window.addEventListener("wheel", e => {
   }
   drawField(); }
 });
-
+/**
+ * Слушатель для перемещения области видимости с помощью стрелок на клавиатуре
+ */
 document.addEventListener("keydown", event => {
 	event.preventDefault();
 	event = event || window.event;
@@ -125,7 +121,9 @@ document.addEventListener("keydown", event => {
 	}
 	drawField();
 } );
-
+/**
+ * Возвращает пару: максимальное значение дубля и максимальную сумму значений на руке игрока
+ */
 function startInfo(): [ number | null, number ] {
 	let maxDouble = -1;
 	let maxSum = -1;
@@ -140,11 +138,13 @@ function startInfo(): [ number | null, number ] {
 		maxSum,
 	]
 }
-
+/**
+ * Перерисовывает игровое поле
+ */
 function drawField(): void {
 	let cell: HTMLButtonElement | null;
 	while ((cell = document.querySelector('.cell')) !== null) {
-	  field.removeChild(cell);
+	  	field.removeChild(cell);
 	}
 	
 	const baseCell = document.createElement('button');
@@ -157,41 +157,58 @@ function drawField(): void {
 	const height = Math.floor(field.clientHeight / (cell.clientHeight*1.027));
 	const frg = document.createDocumentFragment();
 	for (let i = baseY; i < baseY + height; i++)
-	  for (let j = baseX; j < baseX + 16; j++) {
-		if (i === baseY && j === baseX) continue;
-		cell = baseCell.cloneNode() as HTMLButtonElement;
-		cell.addEventListener('click', selectCell);
-		cell.dataset.x = String(j);
-		cell.dataset.y = String(i);
-		frg.appendChild(cell);
-	  }
+	  	for (let j = baseX; j < baseX + 16; j++) {
+			if (i === baseY && j === baseX) continue;
+			cell = baseCell.cloneNode() as HTMLButtonElement;
+			cell.addEventListener('click', selectCell);
+			cell.dataset.x = String(j);
+			cell.dataset.y = String(i);
+			frg.appendChild(cell);
+	  	}
 	field.appendChild(frg);
 	
 	const knuckles = document.querySelectorAll('.placed.knuckle') as NodeListOf<HTMLButtonElement>;
 	for (const elem of knuckles)
-	  drawKnuckle( elem );
-  }
+	  	drawKnuckle( elem );
+}
 
+/**
+ * Обрабатывает выбор первой клетки
+ * 
+ * @param cell Клетка
+ * @param x Координата 'x' клетки 
+ * @param y Координата 'y' клетки
+ */
 function selectFirstCell(cell: HTMLButtonElement, x: number, y: number): void {
 	const cells = field.querySelectorAll('.cell');
 	for (const elem of cells) {
-	  if (elem !== cell)
-	  elem.classList.remove('selected');
+		if (elem !== cell)
+		elem.classList.remove('selected');
 	}
 	if (cell.classList.toggle('selected')) {
-	  x1 = x;
-	  y1 = y;
-	} else {
-	  x1 = y1 = undefined;
+		x1 = x;
+		y1 = y;
 	}
+	else x1 = y1 = undefined;
 	x2 = y2 = undefined;
-  }
+}
   
-  function getCell(x: number, y: number): string {
+/**
+ * Возвращает строку для выбора клетки в querySelector
+ * 
+ * @param x Координата 'x' клетки 
+ * @param y Координата 'y' клетки
+ */
+function getCell(x: number, y: number): string {
 	return `.cell[data-x = \'${x}\'][data-y = \'${y}\']`;
-  }
+}
   
-  function selectCell(e: Event): void {
+/**
+ * Обрабатывает выбор клетки
+ * 
+ * @param e Объект события (выбора клетки)
+ */
+function selectCell(e: Event): void {
 	if ( selectedKnuckle?.classList.contains( 'placed' ) )
 		return;
 	const cell = e.target as HTMLButtonElement;
@@ -199,20 +216,24 @@ function selectFirstCell(cell: HTMLButtonElement, x: number, y: number): void {
 	const y = Number(cell.dataset.y);
 	if (x1 === undefined && y1 === undefined || x === x1 && y === y1 ||
 		Math.abs(x - x1!) + Math.abs(y - y1!) > 1)
-	  selectFirstCell(cell, x, y);
-	else if (x1 !== undefined && y1 !== undefined && x2 === undefined && y2 === undefined) { //select second cell
-	  x2 = x;
-	  y2 = y;
-	  cell.classList.toggle('selected');
-	  if (selectedKnuckle) placeKnuckle();
+	  	selectFirstCell(cell, x, y);
+	else if (x1 !== undefined && y1 !== undefined && x2 === undefined && y2 === undefined) {
+		//select second cell
+	  	x2 = x;
+	  	y2 = y;
+	  	cell.classList.toggle('selected');
+	  	if (selectedKnuckle) placeKnuckle();
 	}
 	else selectFirstCell(cell, x, y);
-  }
-  
-  function placeKnuckle(): void {
+}
+
+/**
+ * Помещает выбранную костяшку в выбранные клетки
+ */
+function placeKnuckle(): void {
 	field.appendChild(selectedKnuckle!);
-	if (hand.children.length % 7 === 0)
-	  drawField();
+	if (!hand.children || hand.children.length % 7 === 0)
+	  	drawField();
 	selectedKnuckle!.classList.remove('selected');
 	selectedKnuckle!.disabled = true;
 	selectedKnuckle!.dataset.x = String(x1);
@@ -231,9 +252,16 @@ function selectFirstCell(cell: HTMLButtonElement, x: number, y: number): void {
 	for ( let knuckle of hand.querySelectorAll( '.knuckle' ) as NodeListOf<HTMLButtonElement> )
 		knuckle.disabled = true;
 	cancel.disabled = false;
-	//endTurn
-  }
-  
+}
+
+/**
+ * Высчитывает графические координаты костяшки на основе координат первой/второй клетки
+ * 
+ * @param knuckle Костяшка
+ * @param cell Клетка
+ * @param deltaX Разность координат 'x' первой и второй клетки (необходима для второй клетки)
+ * @param deltaY Разность координат 'y' первой и второй клетки (необходима для второй клетки)
+ */
 function calcPos( knuckle: HTMLButtonElement, cell: Element, deltaX?: number, deltaY?: number ): void {
 	knuckle.style.left =
 		(cell.getBoundingClientRect().left
@@ -249,6 +277,12 @@ function calcPos( knuckle: HTMLButtonElement, cell: Element, deltaX?: number, de
 		+ "vw";
 }
 
+/**
+ * Отрисовывает костяшку
+ * 
+ * @param knuckle Костяшка
+ * @param data Подробные данные о костяшке
+ */
 function drawKnuckle( knuckle: HTMLButtonElement, data?: Knuckle ): void {
 	let x1: number, y1: number,
 		x2: number | undefined, y2: number | undefined;
@@ -285,28 +319,39 @@ function drawKnuckle( knuckle: HTMLButtonElement, data?: Knuckle ): void {
 		else knuckle.classList.add( "hidden" );
 	}
 }
-  
-  function organizeDots(dots: SVGElement, value: number): void {
+
+/**
+ * Организует блок точек
+ * 
+ * @param dots Элемент, содержащий точки
+ * @param value Количество точек
+ */
+function organizeDots(dots: SVGElement, value: number): void {
 	switch (value) {
-	  case 6:
-		dots.children[6].classList.add('horc', 'top');
-		dots.children[5].classList.add('horc', 'bottom');
-		// falls through
-	  case 5:
-	  case 4:
-		dots.children[4].classList.add('left', 'top');
-		dots.children[3].classList.add('right', 'bottom');
-		// falls through
-	  case 3:
-	  case 2:
-		dots.children[2].classList.add('right', 'top');
-		dots.children[1].classList.add('left', 'bottom');
+	  	case 6:
+			dots.children[6].classList.add('horc', 'top');
+			dots.children[5].classList.add('horc', 'bottom');
+			// falls through
+	  	case 5:
+	  	case 4:
+			dots.children[4].classList.add('left', 'top');
+			dots.children[3].classList.add('right', 'bottom');
+			// falls through
+		case 3:
+		case 2:
+			dots.children[2].classList.add('right', 'top');
+			dots.children[1].classList.add('left', 'bottom');
 	}
 	if (value % 2 === 1)
-	  dots.children[value].classList.add('verc', 'horc');
-  }
-  
-  function generateDots(value: number): SVGElement {
+	  	dots.children[value].classList.add('verc', 'horc');
+}
+
+/**
+ * Генерирует блок точек
+ * 
+ * @param value Количество точек
+ */
+function generateDots(value: number): SVGElement {
 	const svgNS = 'http://www.w3.org/2000/svg';
 	const dots = document.createElementNS(svgNS, 'svg');
 	dots.classList.add('knuckle-dots');
@@ -315,15 +360,21 @@ function drawKnuckle( knuckle: HTMLButtonElement, data?: Knuckle ): void {
 	num.appendChild(document.createTextNode(String(value)));
 	dots.appendChild(num);
 	for (let i = 0; i < value; i++) {
-	  const dot = document.createElementNS(svgNS, 'circle');
-	  dot.classList.add('knuckle-dot');
-	  dots.appendChild(dot);
+		const dot = document.createElementNS(svgNS, 'circle');
+		dot.classList.add('knuckle-dot');
+		dots.appendChild(dot);
 	}
 	organizeDots(dots, value);
 	return dots;
-  }
-  
-  function generateKnuckle(v1: number, v2: number): HTMLButtonElement {
+}
+
+/**
+ * Генерирует костяшку с точками
+ * 
+ * @param v1 Первое значение
+ * @param v2 Второе значение
+ */
+function generateKnuckle(v1: number, v2: number): HTMLButtonElement {
 	const knuckle = document.createElement('button');
 	knuckle.classList.add('knuckle', numerals[v1], numerals[v2]);
 	knuckle.appendChild(generateDots(v1));
@@ -332,22 +383,28 @@ function drawKnuckle( knuckle: HTMLButtonElement, data?: Knuckle ): void {
 	knuckle.appendChild(delimiter);
 	knuckle.appendChild(generateDots(v2));
 	knuckle.addEventListener('click', () => {
-	  const hand = document.querySelectorAll('.hand > .knuckle');
-	  for (const elem of hand) {
-		if (elem !== knuckle)
-		  elem.classList.remove('selected');
-	  }
-	  if (knuckle.classList.toggle('selected')) {
-		selectedKnuckle = knuckle;
-		if ( x1 !== undefined && y1 !== undefined && x2 !== undefined && y2 !== undefined )
-		  placeKnuckle();
-	  }
-	  else selectedKnuckle = null;
+		const hand = document.querySelectorAll('.hand > .knuckle');
+		for (const elem of hand)
+			if (elem !== knuckle)
+				elem.classList.remove('selected');
+		
+		if (knuckle.classList.toggle('selected')) {
+			selectedKnuckle = knuckle;
+			if ( x1 !== undefined && y1 !== undefined && x2 !== undefined && y2 !== undefined )
+				placeKnuckle();
+		}
+		else selectedKnuckle = null;
 	});
 	
 	return knuckle;
   }
 
+/**
+ * Генерирует костяшку и вставляет её в руку
+ * 
+ * @param value1 Первое значение
+ * @param value2 Второе значение
+ */
 function insertKnuckle( value1: number, value2: number ): void {
 	const knuckle = generateKnuckle(value1, value2);
 	hand.appendChild(knuckle);
@@ -355,7 +412,7 @@ function insertKnuckle( value1: number, value2: number ): void {
 	for (const elem of dots)
 	  	elem.setAttributeNS(null, 'viewBox', "0 0 " + String(elem.clientWidth) + " " + String(elem.clientHeight));
 	if ( !hand.children || hand.children.length % 7 <= 1 )
-	drawField();
+		drawField();
 }
 
 function takeKnuckle(): void {
@@ -367,9 +424,7 @@ function setKnuckleTaker( taker: KnuckleTaker ): void {
 }
 
 /**
- * Обрабатывает отправку формы
- * 
- * @param event Событие отправки
+ * Завершает ход
  */
 function onSubmit(): void
 {
@@ -384,6 +439,9 @@ function onSubmit(): void
 	cancel.disabled = true;
 }
 
+/**
+ * Отменяет ход
+ */
 function onCancel(): void
 {
 	hand.appendChild(selectedKnuckle!);
@@ -395,6 +453,11 @@ function onCancel(): void
 	selectedKnuckle = null;
 }
 
+/**
+ * Формирует подробные данные о костяшке для экспорта
+ * 
+ * @param knuckle Костяшка (графическое представление)
+ */
 function exportKnuckle( knuckle: HTMLElement ): Knuckle
 {
 	const values: Array<number> = [];
@@ -418,6 +481,7 @@ function exportKnuckle( knuckle: HTMLElement ): Knuckle
  * Обновляет экран игры
  * 
  * @param myTurn Ход текущего игрока?
+ * @param knuckle Костяшка, положенная на предыдущем ходе
  */
 function update( myTurn: boolean, knuckle: Knuckle | null ): void
 {
@@ -455,6 +519,9 @@ function update( myTurn: boolean, knuckle: Knuckle | null ): void
 	selectedKnuckle = null;
 }
 
+/**
+ * Подсчитывает сумму значений в руке игрока и передает финализатору
+ */
 function countResult(): number {
 	let result: number = 0;
 	for ( let HTMLknuckle of hand.querySelectorAll( '.knuckle' ) as NodeListOf<HTMLElement> ) {
@@ -484,6 +551,11 @@ function setTurnHandler( handler: TurnHandler ): void
 	turnHandler = handler;
 }
 
+/**
+ * Устанавливает финализатор игры
+ * 
+ * @param finalize Финализатор игры
+ */
 function setFinalizer( finalize: Finalizer ): void
 {
 	finalizer = finalize;

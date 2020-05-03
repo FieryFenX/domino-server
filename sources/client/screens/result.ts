@@ -16,6 +16,7 @@ if ( !message || !restart )
  * Обновляет экран завершения игры
  * 
  * @param result Результат, с которым игра завершилась
+ * @param points Количество набранных игроком очков
  */
 function update( result: 'win' | 'loose' | 'abort', points?: number ): void
 {
